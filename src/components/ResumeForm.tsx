@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, Loader2, Download, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface WorkExperience {
   position: string;
@@ -20,6 +21,7 @@ const ResumeForm = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
   
   const [formData, setFormData] = useState({
     fullName: "",
@@ -54,10 +56,62 @@ const ResumeForm = () => {
     setWorkExperiences(updated);
   };
 
+  const checkPDFExists = async (fileName: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('pdfs')
+        .list('', {
+          search: fileName
+        });
+      
+      return !error && data && data.length > 0;
+    } catch (error) {
+      console.log('Error checking PDF existence:', error);
+      return false;
+    }
+  };
+
+  const pollForPDF = async (fileName: string) => {
+    setIsPolling(true);
+    const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
+    let attempts = 0;
+
+    const poll = async () => {
+      attempts++;
+      const pdfExists = await checkPDFExists(fileName);
+      
+      if (pdfExists) {
+        setIsPolling(false);
+        setIsLoading(false);
+        setIsSuccess(true);
+        toast({
+          title: "Resume Generated!",
+          description: "Your AI-powered resume is ready for download.",
+        });
+        return;
+      }
+
+      if (attempts >= maxAttempts) {
+        setIsPolling(false);
+        setIsLoading(false);
+        toast({
+          title: "Error",
+          description: "Resume generation is taking longer than expected. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Poll again after 2 seconds
+      setTimeout(poll, 2000);
+    };
+
+    poll();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
     const requiredFields = [
       'fullName', 'email', 'phone', 'jobTitle', 'summary', 'skills', 
       'degree', 'institution', 'graduationYear'
@@ -103,19 +157,14 @@ const ResumeForm = () => {
       });
 
       if (response.ok) {
-        setTimeout(() => {
-          setIsLoading(false);
-          setIsSuccess(true);
-          toast({
-            title: "Resume Generated!",
-            description: "Your AI-powered resume is ready for download.",
-          });
-        }, 3000);
+        // Start polling for PDF instead of fixed timeout
+        pollForPDF(formData.fullName);
       } else {
         throw new Error('Failed to generate resume');
       }
     } catch (error) {
       setIsLoading(false);
+      setIsPolling(false);
       toast({
         title: "Error",
         description: "Failed to generate resume. Please try again.",
@@ -124,7 +173,7 @@ const ResumeForm = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isPolling) {
     return (
       <div className="container mx-auto px-4 py-16">
         <motion.div 
@@ -135,8 +184,12 @@ const ResumeForm = () => {
           <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Generating Your Resume...</h2>
-          <p className="text-gray-600">Our AI is crafting your professional resume</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {isPolling ? "Finalizing Your Resume..." : "Generating Your Resume..."}
+          </h2>
+          <p className="text-gray-600">
+            {isPolling ? "Please wait while we prepare your PDF" : "Our AI is crafting your professional resume"}
+          </p>
         </motion.div>
       </div>
     );
