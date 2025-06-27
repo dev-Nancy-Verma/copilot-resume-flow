@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -160,8 +159,7 @@ const ResumeForm = () => {
             size="lg"
             className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
             onClick={() => {
-              // This would typically be a dynamic link based on the name
-              window.open(`https://your-supabase-url/storage/v1/object/public/resumes/${formData.fullName.replace(/\s+/g, '_')}_resume.pdf`, '_blank');
+              window.open(`https://toyjxqogwsoqmxhedpgj.supabase.co/storage/v1/object/public/pdfs/${formData.fullName}`, '_blank');
             }}
           >
             <Download className="mr-2 h-5 w-5" />
