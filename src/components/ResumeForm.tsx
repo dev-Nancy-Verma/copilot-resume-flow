@@ -73,15 +73,24 @@ const ResumeForm = () => {
         return false;
       }
       
-      // Check if our specific file exists
-      const fileExists = allFiles?.some(file => 
-        file.name === fileName || 
-        file.name === `${fileName}.pdf` ||
-        file.name.includes(fileName)
-      );
+      // Check if our specific file exists with various filename patterns
+      const fileExists = allFiles?.some(file => {
+        const possibleNames = [
+          fileName,
+          `${fileName}.pdf`,
+          fileName.toLowerCase(),
+          `${fileName.toLowerCase()}.pdf`,
+          fileName.replace(/\s+/g, '_'),
+          `${fileName.replace(/\s+/g, '_')}.pdf`,
+          fileName.replace(/\s+/g, '-'),
+          `${fileName.replace(/\s+/g, '-')}.pdf`
+        ];
+        
+        console.log('Checking file:', file.name, 'against possible names:', possibleNames);
+        return possibleNames.includes(file.name) || file.name.includes(fileName);
+      });
       
       console.log('File exists check result:', fileExists);
-      console.log('Looking for filename variations:', [fileName, `${fileName}.pdf`]);
       
       return fileExists || false;
     } catch (error) {
