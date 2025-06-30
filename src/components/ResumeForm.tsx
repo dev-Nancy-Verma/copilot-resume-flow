@@ -58,15 +58,34 @@ const ResumeForm = () => {
 
   const checkPDFExists = async (fileName: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase.storage
-        .from('pdfs')
-        .list('', {
-          search: fileName
-        });
+      console.log('Checking for PDF with filename:', fileName);
       
-      return !error && data && data.length > 0;
+      // First try to list all files in the bucket to see what's there
+      const { data: allFiles, error: listError } = await supabase.storage
+        .from('pdfs')
+        .list('');
+      
+      console.log('All files in pdfs bucket:', allFiles);
+      console.log('List error:', listError);
+      
+      if (listError) {
+        console.error('Error listing files:', listError);
+        return false;
+      }
+      
+      // Check if our specific file exists
+      const fileExists = allFiles?.some(file => 
+        file.name === fileName || 
+        file.name === `${fileName}.pdf` ||
+        file.name.includes(fileName)
+      );
+      
+      console.log('File exists check result:', fileExists);
+      console.log('Looking for filename variations:', [fileName, `${fileName}.pdf`]);
+      
+      return fileExists || false;
     } catch (error) {
-      console.log('Error checking PDF existence:', error);
+      console.error('Error checking PDF existence:', error);
       return false;
     }
   };
@@ -76,11 +95,16 @@ const ResumeForm = () => {
     const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
     let attempts = 0;
 
+    console.log('Starting to poll for PDF:', fileName);
+
     const poll = async () => {
       attempts++;
+      console.log(`Polling attempt ${attempts}/${maxAttempts} for file: ${fileName}`);
+      
       const pdfExists = await checkPDFExists(fileName);
       
       if (pdfExists) {
+        console.log('PDF found! Showing success screen.');
         setIsPolling(false);
         setIsLoading(false);
         setIsSuccess(true);
@@ -92,6 +116,7 @@ const ResumeForm = () => {
       }
 
       if (attempts >= maxAttempts) {
+        console.log('Max attempts reached. PDF not found.');
         setIsPolling(false);
         setIsLoading(false);
         toast({
