@@ -182,7 +182,7 @@ const ResumeForm = () => {
         workExperiences,
       };
 
-      const response = await fetch('https://platform.copilotgigs.com/webhook-test/600c6682-6936-4147-93f2-bc533422574a', {
+      const response = await fetch('https://platform.copilotgigs.com/webhook/600c6682-6936-4147-93f2-bc533422574a', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
