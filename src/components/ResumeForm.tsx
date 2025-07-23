@@ -182,20 +182,19 @@ const ResumeForm = () => {
         workExperiences,
       };
 
-      const response = await fetch('https://platform.copilotgigs.com/webhook/600c6682-6936-4147-93f2-bc533422574a', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+      const { data, error } = await supabase.functions.invoke('generate-resume', {
+        body: payload,
       });
 
-      if (response.ok) {
-        // Start polling for PDF instead of fixed timeout
-        pollForPDF(formData.fullName);
-      } else {
-        throw new Error('Failed to generate resume');
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to generate resume');
       }
+
+      console.log('Resume generation response:', data);
+      
+      // Start polling for PDF
+      pollForPDF(formData.fullName);
     } catch (error) {
       setIsLoading(false);
       setIsPolling(false);
